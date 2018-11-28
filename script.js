@@ -164,8 +164,25 @@ function getLevel2Gift(orderedItemIds) {
   return level2Gift[index];
 }
 
+function addUserGift(sqlValues) {
+  console.log(sqlValues)
+  if (!sqlValues) {
+    return;
+  }
+  var xhttp = new XMLHttpRequest();
+  xhttp.open("POST", "https://lazada-suli.herokuapp.com/add-user-gift", true);
+  xhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
+  xhttp.onreadystatechange = function() {
+    if (this.readyState == 4 && this.status == 200) {
+      console.log(xhttp.responseText);
+    }
+  };
+  xhttp.send(`sql_values=${sqlValues}`);
+}
+
 function render() {
   var pages = document.getElementsByClassName('la-print-page');
+  var userGiftValues = [];
   for (var i = 0; i < pages.length; i++) {
     var page = pages[i];
     page.style.position = 'relative';
@@ -181,15 +198,23 @@ function render() {
       .replace('{name}', toCamelName(name))
       .replace('{member_rank}', RANKS[memberRenderInfo.ranking]);
     if (memberRenderInfo.template === 1) {
+      if (userInfo[phoneNumber].user_gifts.length !== 0) {
+        console.log('---------');
+        console.log(userInfo[phoneNumber].user_gifts);
+      }
       var orderedItemIds = getUserOrderedItemId(userInfo[phoneNumber]);
       var gift = memberRenderInfo.ranking === 0 ? getLevel1Gift(orderedItemIds) : getLevel2Gift(orderedItemIds);
       html = html.replace('{gift_name}', gift.name)
         .replace('{gift_price}', gift.price)
         .replace('{gift_id}', gift.id)
         .replace('{greeting}', memberRenderInfo.greeting);
+      
+      var orderNumber = page.getElementsByTagName('tr')[9].innerText.substring(12, 28).trim();
+      userGiftValues.push(`('${userInfo[phoneNumber].user.PhoneNumber}',${orderNumber},'${gift.id}','${gift.price}','${new Date()}')`);
     }
 
     page.insertAdjacentHTML('beforeend', html);
   }
   console.log(products);
+  addUserGift(userGiftValues.join(','));
 }
