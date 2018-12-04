@@ -36,7 +36,7 @@ function startRender() {
   numberOfPage = pages.length;
   for (var i = 0; i < pages.length; i++) {
     var page = pages[i];
-    var phoneNumber = page.querySelectorAll('#phone')[1].textContent.trim();
+    var phoneNumber = getUserData(page.innerText).phoneNumber;
     console.log(phoneNumber);
     getInfo(phoneNumber);
   }
@@ -180,6 +180,25 @@ function addUserGift(sqlValues) {
   xhttp.send(`sql_values=${sqlValues}`);
 }
 
+function getUserData(innerText) {
+  var ORDER_TAG = 'Số đơn hàng:';
+  var USER_NAME = 'NGƯỜI NHẬN: ';
+  var PHONE_NUMBER = 'SĐT: ';
+  var lines = innerText.split('\n');
+  var userData = {};
+  for (var i = 0; i < lines.length; i++) {
+    var line = lines[i];
+    if (line.includes(ORDER_TAG)) {
+      userData.orderNumber = line.substring(ORDER_TAG.length).trim();
+    } else if (line.includes(USER_NAME)) {
+      userData.userName = line.substring(USER_NAME.length).trim();
+    } else if (line.includes(PHONE_NUMBER)) {
+      userData.phoneNumber = line.substring(PHONE_NUMBER.length).split(' ')[0].trim();
+    }
+  }
+  return userData;
+}
+
 function render() {
   var pages = document.getElementsByClassName('la-print-page');
   var userGiftValues = [];
@@ -187,14 +206,16 @@ function render() {
     var page = pages[i];
     page.style.position = 'relative';
     var order = page.getElementsByTagName('table')[0];
-    order.style.transform = 'scale(0.7,0.7) rotate(90deg) translateX(-220px)';
-    
-    var phoneNumber = page.querySelectorAll('#phone')[1].textContent.trim();
-    var name = page.getElementsByTagName('tr')[6].getElementsByTagName('span')[0].textContent;
+    order.style.transform = 'scale(1.1,1.1) rotate(90deg) translateX(-50px) translateY(-120px)';
+
+    var userData = getUserData(page.innerText);
+    var phoneNumber = userData.phoneNumber;
+    var name = userData.userName;
+    var orderNumber = userData.orderNumber;
     var memberRenderInfo = getMemberRenderInfo(phoneNumber);
 
     var html = TEMPLATES[memberRenderInfo.template]
-      .replace('<table>', '<table style="width: 700px;height: 450px;position: absolute;top: 540px;">')
+      .replace('<table>', '<table style="width: 700px;height: 450px;position: absolute;top: 540px;transform: translateX(45px) translateY(20px);">')
       .replace('{name}', toCamelName(name))
       .replace('{member_rank}', RANKS[memberRenderInfo.ranking]);
     if (memberRenderInfo.template === 1) {
@@ -209,7 +230,6 @@ function render() {
         .replace('{gift_id}', gift.id)
         .replace('{greeting}', memberRenderInfo.greeting);
       
-      var orderNumber = page.getElementsByTagName('tr')[9].innerText.substring(12, 28).trim();
       userGiftValues.push(`('${userInfo[phoneNumber].user.PhoneNumber}',${orderNumber},'${gift.id}','${gift.price}','${new Date()}')`);
     }
 
