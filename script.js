@@ -104,7 +104,7 @@ function getMemberRenderInfo(phoneNumber) {
       } else if ((orderAfterEvent - 2) % 3 === 2) {
         template = 1;
       }
-      ranking = Math.floor((orderAfterEvent - 2) / 3);
+      ranking = Math.floor((orderAfterEvent - 1) / 3);
     }
   } else {
     if (orderAfterEvent === 0) {
@@ -118,7 +118,7 @@ function getMemberRenderInfo(phoneNumber) {
       } else if ((orderAfterEvent - 1) % 3 === 2) {
         template = 1;
       }
-      ranking = Math.floor((orderAfterEvent - 1) / 3);
+      ranking = Math.floor(orderAfterEvent / 3);
     }
   }
   return { template, ranking, greeting };
@@ -136,9 +136,9 @@ function getUserOrderedItemId(info) {
   return result;
 }
 
-function getLevel1Gift(orderedItemIds) {
+function getLevel1Gift(orderedItemIds, giftItemIds) {
   var level1Gift = products.filter(function(product) {
-    return product.price >= 19000 && product.price <= 29000 && product.quantity > 0 && orderedItemIds.indexOf(product.id) === -1;
+    return product.price >= 19000 && product.price <= 29000 && product.quantity > 0 && orderedItemIds.indexOf(product.id) === -1 && giftItemIds.indexOf(product.id) === -1;
   });
   var index = Math.floor(Math.random() * level1Gift.length)
   for (var i = 0; i < products.length; i++) {
@@ -150,9 +150,9 @@ function getLevel1Gift(orderedItemIds) {
   return level1Gift[index];
 }
 
-function getLevel2Gift(orderedItemIds) {
+function getLevel2Gift(orderedItemIds, giftItemIds) {
   level2Gift = products.filter(function(product) {
-    return product.price >= 40000 && product.quantity > 0 && orderedItemIds.indexOf(product.id) === -1;
+    return product.price >= 40000 && product.quantity > 0 && orderedItemIds.indexOf(product.id) === -1 && giftItemIds.indexOf(product.id) === -1;
   });
   var index = Math.floor(Math.random() * level2Gift.length);
   for (var i = 0; i < products.length; i++) {
@@ -224,7 +224,10 @@ function render() {
         console.log(userInfo[phoneNumber].user_gifts);
       }
       var orderedItemIds = getUserOrderedItemId(userInfo[phoneNumber]);
-      var gift = memberRenderInfo.ranking === 0 ? getLevel1Gift(orderedItemIds) : getLevel2Gift(orderedItemIds);
+      var giftItemIds = userInfo[phoneNumber].user_gifts.map(function(gift) {
+        return gift.SKU;
+      });
+      var gift = memberRenderInfo.ranking === 0 ? getLevel1Gift(orderedItemIds, giftItemIds) : getLevel2Gift(orderedItemIds, giftItemIds);
       html = html.replace('{gift_name}', gift.name)
         .replace('{gift_price}', gift.price)
         .replace('{gift_id}', gift.id)
