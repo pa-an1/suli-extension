@@ -11,10 +11,10 @@ getTemplate();
 function getTemplate() {
   var fullURL = chrome.runtime.getURL("template.html");
   var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
+  xhttp.onreadystatechange = function () {
     if (this.readyState == 4 && this.status == 200) {
       var templates = xhttp.responseText.split('<!-- -------------------------------------- -->');
-      TEMPLATES = templates.filter(function(_, i) {
+      TEMPLATES = templates.filter(function (_, i) {
         return i !== 0 && i !== templates.length - 1;
       });
       getProducts();
@@ -25,7 +25,7 @@ function getTemplate() {
 }
 
 function getProducts() {
-  chrome.storage.sync.get('products', function(data) {
+  chrome.storage.sync.get('products', function (data) {
     products = data.products;
     startRender();
   });
@@ -44,11 +44,11 @@ function startRender() {
 
 function getInfo(phoneNumber) {
   var xhttp = new XMLHttpRequest();
-  xhttp.onreadystatechange = function() {
+  xhttp.onreadystatechange = function () {
     if (this.readyState == 4 && this.status == 200) {
-      var info =  JSON.parse(xhttp.responseText);
+      var info = JSON.parse(xhttp.responseText);
       for (var i = 0; i < info.orders.length; i++) {
-        info.orders[i].Createdat = (new Date(info.orders[i].Createdat)).getTime();
+        info.orders[i].Createdat = (new Date(info.orders[i].Createdat.replace('ICT', 'GMT+07:00'))).getTime();
       }
       userInfo[phoneNumber] = info;
       checkGetInfoIsDone();
@@ -81,10 +81,10 @@ function toCamelName(name) {
 }
 
 function getMemberRenderInfo(phoneNumber) {
-  var orderBeforeEvent = userInfo[phoneNumber].orders.filter(function(order) {
+  var orderBeforeEvent = userInfo[phoneNumber].orders.filter(function (order) {
     return order.Createdat < eventTime;
   }).length;
-  var orderAfterEvent = userInfo[phoneNumber].orders.filter(function(order) {
+  var orderAfterEvent = userInfo[phoneNumber].orders.filter(function (order) {
     return order.Createdat >= eventTime;
   }).length;
 
@@ -137,7 +137,7 @@ function getUserOrderedItemId(info) {
 }
 
 function getLevel1Gift(orderedItemIds, giftItemIds) {
-  var level1Gift = products.filter(function(product) {
+  var level1Gift = products.filter(function (product) {
     return product.price >= 19000 && product.price <= 29000 && product.quantity > 0 && orderedItemIds.indexOf(product.id) === -1 && giftItemIds.indexOf(product.id) === -1;
   });
   var index = Math.floor(Math.random() * level1Gift.length)
@@ -151,7 +151,7 @@ function getLevel1Gift(orderedItemIds, giftItemIds) {
 }
 
 function getLevel2Gift(orderedItemIds, giftItemIds) {
-  level2Gift = products.filter(function(product) {
+  level2Gift = products.filter(function (product) {
     return product.price >= 40000 && product.quantity > 0 && orderedItemIds.indexOf(product.id) === -1 && giftItemIds.indexOf(product.id) === -1;
   });
   var index = Math.floor(Math.random() * level2Gift.length);
@@ -172,7 +172,7 @@ function addUserGift(sqlValues) {
   var xhttp = new XMLHttpRequest();
   xhttp.open("POST", "https://lazada-suli.herokuapp.com/add-user-gift", true);
   xhttp.setRequestHeader("Content-Type", "application/x-www-form-urlencoded");
-  xhttp.onreadystatechange = function() {
+  xhttp.onreadystatechange = function () {
     if (this.readyState == 4 && this.status == 200) {
       console.log(xhttp.responseText);
     }
@@ -184,6 +184,10 @@ function getUserData(innerText) {
   var ORDER_TAG = 'Số đơn hàng:';
   var USER_NAME = 'NGƯỜI NHẬN: ';
   var PHONE_NUMBER = 'SĐT: ';
+  var ORDER_PRODUCT_START = 'Tên sản phẩm	Mã	Loại';
+  var ORDER_PRODUCT_END = 'Số tiền thu hộ:';
+  var startLine = 0;
+  var endLine = 0;
   var lines = innerText.split('\n');
   var userData = {};
   for (var i = 0; i < lines.length; i++) {
@@ -194,8 +198,19 @@ function getUserData(innerText) {
       userData.userName = line.substring(USER_NAME.length).trim();
     } else if (line.includes(PHONE_NUMBER)) {
       userData.phoneNumber = line.substring(PHONE_NUMBER.length).split(' ')[0].trim();
+    } else if (line.includes(ORDER_PRODUCT_START)) {
+      startLine = i + 1;
+    } else if (line.includes(ORDER_PRODUCT_END)) {
+      endLine = i;
     }
   }
+  var orderProducts = [];
+  for (var i = startLine; i < endLine; i++) {
+    var line = lines[i];
+    var parts = line.split('\t');
+    orderProducts.push(parts[1]);
+  }
+  userData.orderProducts = orderProducts;
   return userData;
 }
 
@@ -207,12 +222,20 @@ function render() {
     page.style.position = 'relative';
     var order = page.getElementsByTagName('table')[0];
     order.style.transform = 'scale(1.1,1.1) rotate(90deg) translateX(-50px) translateY(-120px)';
+    order.style.borderRight = '3px dotted black';
 
     var userData = getUserData(page.innerText);
     var phoneNumber = userData.phoneNumber;
     var name = userData.userName;
     var orderNumber = userData.orderNumber;
     var memberRenderInfo = getMemberRenderInfo(phoneNumber);
+
+    // change order product
+    var orderProducts = userData.orderProducts.map(function(orderProduct, index) {
+      return (index + 1) + ') ' + orderProduct;
+    });
+    page.getElementsByClassName('order_item_table')[0].innerHTML = orderProducts.join('\t');
+    page.getElementsByClassName('order_item_table')[0].parentNode.insertAdjacentHTML('beforeend', '<hr>');
 
     var html = TEMPLATES[memberRenderInfo.template]
       .replace('<table>', '<table style="width: 700px;height: 450px;position: absolute;top: 540px;transform: translateX(45px) translateY(20px);">')
@@ -224,7 +247,7 @@ function render() {
         console.log(userInfo[phoneNumber].user_gifts);
       }
       var orderedItemIds = getUserOrderedItemId(userInfo[phoneNumber]);
-      var giftItemIds = userInfo[phoneNumber].user_gifts.map(function(gift) {
+      var giftItemIds = userInfo[phoneNumber].user_gifts.map(function (gift) {
         return gift.SKU;
       });
       var gift = memberRenderInfo.ranking === 0 ? getLevel1Gift(orderedItemIds, giftItemIds) : getLevel2Gift(orderedItemIds, giftItemIds);
@@ -232,7 +255,7 @@ function render() {
         .replace('{gift_price}', gift.price)
         .replace('{gift_id}', gift.id)
         .replace('{greeting}', memberRenderInfo.greeting);
-      
+
       userGiftValues.push(`('${userInfo[phoneNumber].user.PhoneNumber}',${orderNumber},'${gift.id}','${gift.price}','${new Date()}')`);
     }
 
