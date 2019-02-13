@@ -221,7 +221,7 @@ function render() {
     var page = pages[i];
     page.style.position = 'relative';
     var order = page.getElementsByTagName('table')[0];
-    order.style.transform = 'scale(1.1,1.1) rotate(90deg) translateX(-50px) translateY(-120px)';
+    order.style.transform = 'scale(1.1,1.1) rotate(90deg) translateX(-20px) translateY(-120px)';
     order.style.borderRight = '3px dotted black';
 
     var userData = getUserData(page.innerText);
