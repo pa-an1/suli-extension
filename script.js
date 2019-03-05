@@ -208,6 +208,9 @@ function getUserData(innerText) {
   for (var i = startLine; i < endLine; i++) {
     var line = lines[i];
     var parts = line.split('\t');
+    if (parts.length < 2) {
+      continue;
+    }
     orderProducts.push(parts[1]);
   }
   userData.orderProducts = orderProducts;
